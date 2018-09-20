@@ -1,0 +1,10 @@
+#!/bin/bash
+
+function path() {
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    #OS is MacOS
+    echo $(realpath -e $1)
+  else
+    echo $(readlink --canonicalize $1)
+  fi
+}

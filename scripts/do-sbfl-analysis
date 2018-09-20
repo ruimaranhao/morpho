@@ -1,6 +1,8 @@
 #!/bin/bash
 
-HERE=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
+source $(dirname "${BASH_SOURCE[0]}")/path-function
+
+HERE=$(path "$(dirname "${BASH_SOURCE[0]}")")
 PATH="$HERE:$PATH"
 
 USAGE="$0 [--restrictions-file FILE] PROJECT BUG COVERAGE_MATRIX STATEMENT_NAMES DEFECTS4J_PATH"
@@ -23,8 +25,8 @@ done
 if [ "$#" != 5 ]; then echo "usage: $USAGE" >&2; exit 1; fi
 PROJECT=$1
 BUG=$2
-COVERAGE_MATRIX="$(realpath -e "$3")"; if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
-STATEMENT_NAMES="$(realpath -e "$4")"; if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
+COVERAGE_MATRIX="$(path "$3")"; if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
+STATEMENT_NAMES="$(path "$4")"; if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
 D4J_PATH=$5
 
 for FORMULA in tarantula ochiai opt2 barinel dstar2 muse jaccard; do
@@ -51,8 +53,8 @@ for FORMULA in tarantula ochiai opt2 barinel dstar2 muse jaccard; do
     JSON_SUSPS_FILE=$(pwd)/line-susps.json
     line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
                              --test-failing "$TEST_FAILING" \
-                             --output "$JSON_SUSPS_FILE"                        
-                               
+                             --output "$JSON_SUSPS_FILE"
+
     popd >/dev/null
   done
 
