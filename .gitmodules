@@ -1,3 +1,6 @@
 [submodule "fault-localization-data"]
 	path = fault-localization-data
 	url = git@bitbucket.org:rjust/fault-localization-data.git
+[submodule "defects4j"]
+	path = defects4j
+	url = git@github.com:rjust/defects4j.git
