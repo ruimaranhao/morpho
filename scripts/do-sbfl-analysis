@@ -1,0 +1,60 @@
+#!/bin/bash
+
+HERE=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
+PATH="$HERE:$PATH"
+
+USAGE="$0 [--restrictions-file FILE] PROJECT BUG COVERAGE_MATRIX STATEMENT_NAMES DEFECTS4J_PATH"
+die() {
+  echo "$@" >&2
+  exit 1
+}
+
+RESTRICTIONS_FILE=''
+while [[ "$1" = --* ]]; do
+  OPTION=$1; shift
+  case $OPTION in
+    (--restrictions-file)
+      RESTRICTIONS_FILE=$1; shift;;
+    (*)
+      die "usage: $USAGE";;
+  esac
+done
+
+if [ "$#" != 5 ]; then echo "usage: $USAGE" >&2; exit 1; fi
+PROJECT=$1
+BUG=$2
+COVERAGE_MATRIX="$(realpath -e "$3")"; if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
+STATEMENT_NAMES="$(realpath -e "$4")"; if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
+D4J_PATH=$5
+
+for FORMULA in tarantula ochiai opt2 barinel dstar2 muse jaccard; do
+  if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --formula "$FORMULA" || continue; fi
+  DIR="formula-$FORMULA"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+  for TOTAL_DEFN in tests elements; do
+    if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --total-defn "$TOTAL_DEFN" || continue; fi
+    DIR="totaldefn-$TOTAL_DEFN"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+
+    STMT_SUSPS_FILE="$(pwd)/stmt-susps.txt"
+    crush-matrix --formula "$FORMULA" --matrix "$COVERAGE_MATRIX" \
+                 --element-type 'Statement' \
+                 --element-names "$STATEMENT_NAMES" \
+                 --total-defn "$TOTAL_DEFN" \
+                 --output "$STMT_SUSPS_FILE" || exit 1
+
+    LINE_SUSPS_FILE=$(pwd)/line-susps.txt
+    stmt-susps-to-line-susps --stmt-susps "$STMT_SUSPS_FILE" \
+                             --source-code-lines "$HERE/source-code-lines/$PROJECT-${BUG}b.source-code.lines" \
+                             --output "$LINE_SUSPS_FILE"
+
+    TEST_FAILING=$(grep "^---"  $D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG | cut -f2 -d' ')
+
+    JSON_SUSPS_FILE=$(pwd)/line-susps.json
+    line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
+                             --test-failing "$TEST_FAILING" \
+                             --output "$JSON_SUSPS_FILE"                        
+                               
+    popd >/dev/null
+  done
+
+  popd >/dev/null
+done
