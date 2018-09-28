@@ -1,0 +1,102 @@
+#!/bin/bash
+
+source $(dirname "${BASH_SOURCE[0]}")/path-function
+
+HERE=$(path "$(dirname "${BASH_SOURCE[0]}")")
+PATH="$HERE:$PATH"
+FOLDER=$PWD
+
+USAGE="$0 [--restrictions-file FILE] PROJECT BUG COVERAGE_MATRIX STATEMENT_NAMES LITHIUM_SLICER_FOLDER"
+die() {
+  echo "$@" >&2
+  exit 1
+}
+
+RESTRICTIONS_FILE=''
+while [[ "$1" = --* ]]; do
+  OPTION=$1; shift
+  case $OPTION in
+    (--restrictions-file)
+      RESTRICTIONS_FILE=$1; shift;;
+    (*)
+      die "usage: $USAGE";;
+  esac
+done
+
+if [ "$#" != 5 ]; then echo "usage: $USAGE" >&2; exit 1; fi
+PROJECT=$1
+BUG=$2
+COVERAGE_MATRIX="$(path "$3")"; if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
+STATEMENT_NAMES="$(path "$4")"; if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
+LITHIUM_SLICER_FOLDER=$5
+
+# get tests
+DIR="data/$PROJECT/$BUG/"; pushd "$DIR" >/dev/null
+$(grep "^* Started " gzoltars/$PROJECT/$BUG/log.txt | cut -f3 -d' ' | sed 's/#/::/g' > gzoltars/$PROJECT/$BUG/tests)
+popd >/dev/null
+
+# copy original matrix
+cp $COVERAGE_MATRIX $COVERAGE_MATRIX-slicer
+cp $STATEMENT_NAMES $STATEMENT_NAMES-slicer
+
+# get slicer tests
+DIR="$LITHIUM_SLICER_FOLDER/$PROJECT/$BUG"; pushd "$DIR" >/dev/null
+  SLICER_TESTS=$(ls -p . | grep -v [^/]$)
+popd >/dev/null
+
+for SLICER_TEST in $SLICER_TESTS; do  
+  # update matrix
+  DIR="data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG"; pushd "$DIR" >/dev/null
+  TESTS_FILE=$(pwd)/tests
+  MATRIX_SLICER_FILE=$(pwd)/matrix-slicer
+  SPECTRA_SLICER_FILE=$(pwd)/spectra-slicer
+  popd >/dev/null
+  SLICER_JSON_PATH=$LITHIUM_SLICER_FOLDER/$PROJECT/$BUG/$SLICER_TEST
+  SLICER_FILENAME=slice-*.json
+  update-matrix --tests "$TESTS_FILE" \
+                --slicer-test "$SLICER_TEST" \
+                --slicer-spectra "$SPECTRA_SLICER_FILE" \
+                --slicer-json-path "$SLICER_JSON_PATH" \
+                --slicer-json-filename-temp "$SLICER_FILENAME" \
+                --output "$MATRIX_SLICER_FILE" || exit 1
+done
+
+DIR="projects/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+for FORMULA in ochiai; do
+  if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --formula "$FORMULA" || continue; fi
+  DIR="formula-$FORMULA-slicer"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+  for TOTAL_DEFN in tests; do
+    if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --total-defn "$TOTAL_DEFN" || continue; fi
+    DIR="totaldefn-$TOTAL_DEFN-slicer"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+
+    STMT_SUSPS_FILE=$(pwd)/stmt-susps-slicer.txt
+    crush-matrix --formula "$FORMULA" --matrix "$MATRIX_SLICER_FILE" \
+                 --element-type 'Statement' \
+                 --element-names "$STATEMENT_NAMES" \
+                 --total-defn "$TOTAL_DEFN" \
+                 --output "$STMT_SUSPS_FILE" || exit 1
+
+    LINE_SUSPS_FILE=$(pwd)/line-susps-slicer.txt
+    stmt-susps-to-line-susps --stmt-susps "$STMT_SUSPS_FILE" \
+                             --source-code-lines "$HERE/source-code-lines/$PROJECT-${BUG}b.source-code.lines" \
+                             --output "$LINE_SUSPS_FILE" || exit 1
+
+    for SCORING_SCHEME in first last mean median; do
+      echo '---- ' $SCORING_SCHEME
+      if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --scoring-scheme "$SCORING_SCHEME" || continue; fi
+      DIR="scoring-$SCORING_SCHEME"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+      DEST=$(pwd)/score-slicer.txt
+      score-ranking --project "$PROJECT" --bug "$BUG" \
+                    --line-susps <(tail -n +2 "$LINE_SUSPS_FILE") \
+                    --scoring-scheme "$SCORING_SCHEME" \
+                    --sloc-csv "$HERE/buggy-lines/sloc.csv" \
+                    --buggy-lines "$HERE/buggy-lines/$PROJECT-$BUG.buggy.lines" \
+                    --output "$DEST" || exit 1
+      popd >/dev/null
+    done
+
+    popd >/dev/null
+  done
+
+  popd >/dev/null
+done

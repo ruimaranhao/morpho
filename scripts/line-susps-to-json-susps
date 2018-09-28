@@ -1,0 +1,67 @@
+#!/usr/bin/python2.7
+
+import argparse
+import csv
+import json
+import operator
+import re
+from itertools import islice
+
+
+def line_to_class(line):
+    classname, loc = line.rsplit('#',1)
+    return classname, loc
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--line-susps', required=True)
+parser.add_argument('--formula', required=True)
+parser.add_argument('--test-failing', required=True)
+parser.add_argument('--tests-log', required=True)
+parser.add_argument('--output', required=True)
+
+args = parser.parse_args()
+
+tests_failing = args.test_failing.split('\n')
+
+dic={}
+
+failing = []
+# @ improve this
+with open(args.tests_log) as f:
+    lines = f.read().splitlines() 
+    for t in tests_failing:
+        class_name, test_name = t.rsplit('::')
+        i=0
+        j=0
+        for l in lines:
+            if re.search(r'--- '+class_name+r'::'+test_name, l) != None:
+                start = 1
+                j=i+1
+            if start == 1 and re.search(r'.*at .*',l) != None:
+                start = 0
+                error = lines[j:i]
+                failing.append({
+                        'test': t,
+                        'error': error
+                    }) 
+            i+=1
+
+rankings = []
+with open(args.line_susps) as fin:
+    reader = csv.DictReader(fin)
+    for row in reader:
+        classname, loc = line_to_class(row['Line'])
+        susps = float(row['Suspiciousness'])
+        if susps != 0.0:
+            rankings.append({
+                'class': classname,
+                'loc': loc,
+                'score': susps
+            })
+
+dic['rankings'] = sorted(rankings, key=lambda item: item['score'], reverse=True)
+dic['failing'] = failing
+
+# save data in json
+with open(args.output, 'w') as outfile:
+    json.dump(dic, outfile, indent=4)

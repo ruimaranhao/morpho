@@ -1,0 +1,5 @@
+# Don't track content of these folders
+scripts/buggy-lines/
+scripts/source-code-lines/
+defects4j/
+fault-localization-data/
