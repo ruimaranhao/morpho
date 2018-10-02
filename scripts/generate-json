@@ -4,8 +4,9 @@ source $(dirname "${BASH_SOURCE[0]}")/path-function
 
 HERE=$(path "$(dirname "${BASH_SOURCE[0]}")")
 PATH="$HERE:$PATH"
+FOLDER=$PWD
 
-USAGE="$0 [--restrictions-file FILE] PROJECT BUG COVERAGE_MATRIX STATEMENT_NAMES DEFECTS4J_PATH"
+USAGE="$0 [--restrictions-file FILE] PROJECT BUG DEFECTS4J_PATH"
 die() {
   echo "$@" >&2
   exit 1
@@ -22,17 +23,31 @@ while [[ "$1" = --* ]]; do
   esac
 done
 
-if [ "$#" != 5 ]; then echo "usage: $USAGE" >&2; exit 1; fi
+if [ "$#" != 3 ]; then echo "usage: $USAGE" >&2; exit 1; fi
 PROJECT=$1
 BUG=$2
-COVERAGE_MATRIX="$(path "$3")"; if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
-STATEMENT_NAMES="$(path "$4")"; if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
-D4J_PATH=$5
+D4J_PATH=$3
 
-for FORMULA in tarantula ochiai opt2 barinel dstar2 muse jaccard; do
+# creates output folder for project
+DIR="$FOLDER/output/$PROJECT"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+
+# gets the bugs of a project
+DIR="$FOLDER/data/$PROJECT"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+
+COVERAGE_MATRIX=$FOLDER/data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/matrix
+if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
+STATEMENT_NAMES=$FOLDER/data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/spectra
+if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
+TESTS_LOG=$FOLDER/data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/log.txt
+if [ ! -f "$TESTS_LOG" ]; then echo "given logs file does not exist" >&2; exit 1; fi
+
+DIR="$FOLDER/projects/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+
+for FORMULA in ochiai; do
+  DIR="$FOLDER/projects/$PROJECT/$BUG"; pushd "$DIR" >/dev/null
   if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --formula "$FORMULA" || continue; fi
   DIR="formula-$FORMULA"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
-  for TOTAL_DEFN in tests elements; do
+  for TOTAL_DEFN in tests; do
     if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --total-defn "$TOTAL_DEFN" || continue; fi
     DIR="totaldefn-$TOTAL_DEFN"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
 
@@ -46,17 +61,25 @@ for FORMULA in tarantula ochiai opt2 barinel dstar2 muse jaccard; do
     LINE_SUSPS_FILE=$(pwd)/line-susps.txt
     stmt-susps-to-line-susps --stmt-susps "$STMT_SUSPS_FILE" \
                              --source-code-lines "$HERE/source-code-lines/$PROJECT-${BUG}b.source-code.lines" \
-                             --output "$LINE_SUSPS_FILE"
+                             --output "$LINE_SUSPS_FILE" || exit 1
 
     TEST_FAILING=$(grep "^---"  $D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG | cut -f2 -d' ')
-
-    JSON_SUSPS_FILE=$(pwd)/line-susps.json
+    
+    DIR="$FOLDER/output/$PROJECT"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+    JSON_SUSPS_FILE=$(pwd)/$BUG.json
     line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
+                             --formula "$FORMULA" \
                              --test-failing "$TEST_FAILING" \
-                             --output "$JSON_SUSPS_FILE"
+                             --tests-log "$TESTS_LOG" \
+                             --output "$JSON_SUSPS_FILE" || exit 1
 
     popd >/dev/null
   done
 
   popd >/dev/null
 done
+
+
+
+
+

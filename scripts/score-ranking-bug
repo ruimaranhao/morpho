@@ -1,0 +1,52 @@
+#!/bin/bash
+
+source $(dirname "${BASH_SOURCE[0]}")/path-function
+
+HERE=$(path "$(dirname "${BASH_SOURCE[0]}")")
+PATH="$HERE:$PATH"
+
+USAGE="$0 [--restrictions-file FILE] PROJECT BUG COVERAGE_MATRIX STATEMENT_NAMES FORMULA TOTAL_DEFN"
+die() {
+  echo "$@" >&2
+  exit 1
+}
+
+RESTRICTIONS_FILE=''
+while [[ "$1" = --* ]]; do
+  OPTION=$1; shift
+  case $OPTION in
+    (--restrictions-file)
+      RESTRICTIONS_FILE=$1; shift;;
+    (*)
+      die "usage: $USAGE";;
+  esac
+done
+
+if [ "$#" != 6 ]; then echo "usage: $USAGE" >&2; exit 1; fi
+PROJECT=$1
+BUG=$2
+COVERAGE_MATRIX="$(path "$3")"; if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
+STATEMENT_NAMES="$(path "$4")"; if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
+FORMULA=$5; #if [[ $5 == ochiai ]]; then echo "formula not accepted" >&2; exit 1; fi
+TOTAL_DEFN=$6; #if [[ $6 == tests ]]; then echo "total-defn not accepted" >&2; exit 1; fi
+
+DIR="projects/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --formula "$FORMULA" || continue; fi
+DIR="formula-$FORMULA"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --total-defn "$TOTAL_DEFN" || continue; fi
+DIR="totaldefn-$TOTAL_DEFN"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+
+LINE_SUSPS_FILE=$(pwd)/line-susps.txt
+
+for SCORING_SCHEME in first last mean median; do
+  if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --scoring-scheme "$SCORING_SCHEME" || continue; fi
+  DIR="scoring-$SCORING_SCHEME"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+  DEST=$(pwd)/score.txt
+  score-ranking --project "$PROJECT" --bug "$BUG" \
+                --line-susps <(tail -n +2 "$LINE_SUSPS_FILE") \
+                --scoring-scheme "$SCORING_SCHEME" \
+                --sloc-csv "$HERE/buggy-lines/sloc.csv" \
+                --buggy-lines "$HERE/buggy-lines/$PROJECT-$BUG.buggy.lines" \
+                --output "$DEST"
+  popd >/dev/null
+done
