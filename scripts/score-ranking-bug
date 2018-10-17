@@ -39,6 +39,7 @@ DIR="totaldefn-$TOTAL_DEFN"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
 LINE_SUSPS_FILE=$(pwd)/line-susps.txt
 
 for SCORING_SCHEME in first last mean median; do
+  echo '----- ' $SCORING_SCHEME
   if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --scoring-scheme "$SCORING_SCHEME" || continue; fi
   DIR="scoring-$SCORING_SCHEME"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
   DEST=$(pwd)/score.txt

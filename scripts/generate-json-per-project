@@ -38,9 +38,9 @@ for BUG in $(seq 1 $NO_BUGS); do
   
   DIR="$FOLDER/data/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
 
-  wget http://fault-localization.cs.washington.edu/data/$PROJECT/$BUG/gzoltar-files.tar.gz
+  #wget http://fault-localization.cs.washington.edu/data/$PROJECT/$BUG/gzoltar-files.tar.gz
   
-  tar -xvf gzoltar-files.tar.gz
+  #tar -xvf gzoltar-files.tar.gz
 
   COVERAGE_MATRIX=$FOLDER/data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/matrix
   if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
@@ -76,11 +76,10 @@ for BUG in $(seq 1 $NO_BUGS); do
       DIR="$FOLDER/output/$PROJECT"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
       JSON_SUSPS_FILE=$(pwd)/$BUG.json
       line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
-                               --formula "$FORMULA" \
                                --test-failing "$TEST_FAILING" \
                                --tests-log "$TESTS_LOG" \
+                               --bug-no "$BUG" \
                                --output "$JSON_SUSPS_FILE" || exit 1
-      fi
 
       popd >/dev/null
     done

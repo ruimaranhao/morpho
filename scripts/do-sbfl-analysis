@@ -5,7 +5,7 @@ source $(dirname "${BASH_SOURCE[0]}")/path-function
 HERE=$(path "$(dirname "${BASH_SOURCE[0]}")")
 PATH="$HERE:$PATH"
 
-USAGE="$0 [--restrictions-file FILE] PROJECT BUG COVERAGE_MATRIX STATEMENT_NAMES DEFECTS4J_PATH"
+USAGE="$0 [--restrictions-file FILE] PROJECT BUG COVERAGE_MATRIX STATEMENT_NAMES DEFECTS4J_PATH FORMULA TOTAL_DEFN"
 die() {
   echo "$@" >&2
   exit 1
@@ -22,41 +22,50 @@ while [[ "$1" = --* ]]; do
   esac
 done
 
-if [ "$#" != 5 ]; then echo "usage: $USAGE" >&2; exit 1; fi
+if [ "$#" != 7 ]; then echo "usage: $USAGE" >&2; exit 1; fi
+#@TODO: Check if project is in the external file
 PROJECT=$1
+#@TODO: Check if the bug number is within the range of number of bugs from the external file
 BUG=$2
 COVERAGE_MATRIX="$(path "$3")"; if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
 STATEMENT_NAMES="$(path "$4")"; if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
-D4J_PATH=$5
+D4J_PATH="$(path "$5")"; if [ ! -d "$D4J_PATH" ]; then echo "given defects4j directory does not exist" >&2; exit 1; fi
+#@TODO: Accept other formulas
+FORMULA=$6; if [ $FORMULA != ochiai ]; then echo "given formula not accepted" >&2; exit 1; fi
+#@TODO: Accept elements
+TOTAL_DEFN=$7; if [ $TOTAL_DEFN != tests ]; then echo "total-defn not accepted" >&2; exit 1; fi
 
-for FORMULA in tarantula ochiai opt2 barinel dstar2 muse jaccard; do
-  if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --formula "$FORMULA" || continue; fi
-  DIR="formula-$FORMULA"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
-  for TOTAL_DEFN in tests elements; do
-    if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --total-defn "$TOTAL_DEFN" || continue; fi
-    DIR="totaldefn-$TOTAL_DEFN"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+#@TODO: Turn this path into an argument. To add more flexibility.
+TESTS_LOG=$D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG
+if [ ! -f "$TESTS_LOG" ]; then echo "given logs file does not exist" >&2; exit 1; fi
 
-    STMT_SUSPS_FILE=$(pwd)/stmt-susps.txt
-    crush-matrix --formula "$FORMULA" --matrix "$COVERAGE_MATRIX" \
-                 --element-type 'Statement' \
-                 --element-names "$STATEMENT_NAMES" \
-                 --total-defn "$TOTAL_DEFN" \
-                 --output "$STMT_SUSPS_FILE" || exit 1
+if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --formula "$FORMULA" || continue; fi
+DIR="projects/$PROJECT/$BUG/formula-$FORMULA"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --total-defn "$TOTAL_DEFN" || continue; fi
+DIR="totaldefn-$TOTAL_DEFN"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
 
-    LINE_SUSPS_FILE=$(pwd)/line-susps.txt
-    stmt-susps-to-line-susps --stmt-susps "$STMT_SUSPS_FILE" \
-                             --source-code-lines "$HERE/source-code-lines/$PROJECT-${BUG}b.source-code.lines" \
-                             --output "$LINE_SUSPS_FILE"
+STMT_SUSPS_FILE=$(pwd)/stmt-susps.txt
+crush-matrix --formula "$FORMULA" --matrix "$COVERAGE_MATRIX" \
+             --element-type 'Statement' \
+             --element-names "$STATEMENT_NAMES" \
+             --total-defn "$TOTAL_DEFN" \
+             --output "$STMT_SUSPS_FILE" || exit 1
 
-    TEST_FAILING=$(grep "^---"  $D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG | cut -f2 -d' ')
+LINE_SUSPS_FILE=$(pwd)/line-susps.txt
+stmt-susps-to-line-susps --stmt-susps "$STMT_SUSPS_FILE" \
+                         --source-code-lines "$HERE/source-code-lines/$PROJECT-${BUG}b.source-code.lines" \
+                         --output "$LINE_SUSPS_FILE" || exit 1
 
-    JSON_SUSPS_FILE=$(pwd)/line-susps.json
-    line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
-                             --test-failing "$TEST_FAILING" \
-                             --output "$JSON_SUSPS_FILE"
+TEST_FAILING=$(grep "^---"  $TESTS_LOG | cut -f2 -d' ')
 
-    popd >/dev/null
-  done
+popd >/dev/null; popd >/dev/null
 
-  popd >/dev/null
-done
+DIR="output/$PROJECT"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+JSON_SUSPS_FILE=$(pwd)/$BUG.json
+line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
+                         --test-failing "$TEST_FAILING" \
+                         --tests-log "$TESTS_LOG" \
+                         --output "$JSON_SUSPS_FILE" || exit 1
+
+popd >/dev/null
+

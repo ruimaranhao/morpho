@@ -1,0 +1,17 @@
+#!/bin/bash
+
+USAGE="$0 [--restrictions-file FILE] PROJECT NO_BUGS"
+die() {
+  echo "$@" >&2
+  exit 1
+}
+
+if [ "$#" != 2 ]; then echo "usage: $USAGE" >&2; exit 1; fi
+#@TODO: Check if project is in the external file
+PROJECT=$1
+#@TODO: Check if the bug number is within the range of number of bugs from the external file
+NO_BUGS=$2
+
+for BUG in $(seq 1 $NO_BUGS); do 
+    cp tests/$PROJECT/$BUG/tests data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/tests
+done

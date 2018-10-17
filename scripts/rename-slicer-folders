@@ -1,0 +1,34 @@
+#!/bin/bash
+
+source $(dirname "${BASH_SOURCE[0]}")/path-function
+
+HERE=$(path "$(dirname "${BASH_SOURCE[0]}")")
+PATH="$HERE:$PATH"
+FOLDER=$PWD
+
+USAGE="$0 [--restrictions-file FILE] PROJECT NO_BUGS"
+die() {
+  echo "$@" >&2
+  exit 1
+}
+
+RESTRICTIONS_FILE=''
+while [[ "$1" = --* ]]; do
+  OPTION=$1; shift
+  case $OPTION in
+    (--restrictions-file)
+      RESTRICTIONS_FILE=$1; shift;;
+    (*)
+      die "usage: $USAGE";;
+  esac
+done
+
+if [ "$#" != 2 ]; then echo "usage: $USAGE" >&2; exit 1; fi
+PROJECT=$1
+NO_BUGS=$2
+
+for BUG in $(seq 1 $NO_BUGS); do 
+
+    cp tests/$PROJECT/$BUG/tests data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/tests
+
+done

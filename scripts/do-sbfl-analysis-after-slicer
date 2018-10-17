@@ -4,7 +4,6 @@ source $(dirname "${BASH_SOURCE[0]}")/path-function
 
 HERE=$(path "$(dirname "${BASH_SOURCE[0]}")")
 PATH="$HERE:$PATH"
-FOLDER=$PWD
 
 USAGE="$0 [--restrictions-file FILE] PROJECT BUG COVERAGE_MATRIX STATEMENT_NAMES LITHIUM_SLICER_FOLDER"
 die() {
@@ -24,20 +23,16 @@ while [[ "$1" = --* ]]; do
 done
 
 if [ "$#" != 5 ]; then echo "usage: $USAGE" >&2; exit 1; fi
+#@TODO: Check if project is in the external file
 PROJECT=$1
+#@TODO: Check if the bug number is within the range of number of bugs from the external file
 BUG=$2
 COVERAGE_MATRIX="$(path "$3")"; if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
 STATEMENT_NAMES="$(path "$4")"; if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
-LITHIUM_SLICER_FOLDER=$5
+LITHIUM_SLICER_FOLDER="$(path "$5")"; if [ ! -d "$LITHIUM_SLICER_FOLDER" ]; then echo "given lithium-slicer directory does not exist" >&2; exit 1; fi
 
-# get tests
-DIR="data/$PROJECT/$BUG/"; pushd "$DIR" >/dev/null
-$(grep "^* Started " gzoltars/$PROJECT/$BUG/log.txt | cut -f3 -d' ' | sed 's/#/::/g' > gzoltars/$PROJECT/$BUG/tests)
-popd >/dev/null
-
-# copy original matrix
+# copy original matrix for coverage and statements
 cp $COVERAGE_MATRIX $COVERAGE_MATRIX-slicer
-cp $STATEMENT_NAMES $STATEMENT_NAMES-slicer
 
 # get slicer tests
 DIR="$LITHIUM_SLICER_FOLDER/$PROJECT/$BUG"; pushd "$DIR" >/dev/null
@@ -45,22 +40,21 @@ DIR="$LITHIUM_SLICER_FOLDER/$PROJECT/$BUG"; pushd "$DIR" >/dev/null
 popd >/dev/null
 
 for SLICER_TEST in $SLICER_TESTS; do  
-  # update matrix
   DIR="data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG"; pushd "$DIR" >/dev/null
   TESTS_FILE=$(pwd)/tests
   MATRIX_SLICER_FILE=$(pwd)/matrix-slicer
-  SPECTRA_SLICER_FILE=$(pwd)/spectra-slicer
   popd >/dev/null
+  
   SLICER_JSON_PATH=$LITHIUM_SLICER_FOLDER/$PROJECT/$BUG/$SLICER_TEST
-  SLICER_FILENAME=slice-*.json
+  SLICER_FILENAME=slicer-*.json
   update-matrix --tests "$TESTS_FILE" \
                 --slicer-test "$SLICER_TEST" \
-                --slicer-spectra "$SPECTRA_SLICER_FILE" \
+                --element-names "$STATEMENT_NAMES" \
                 --slicer-json-path "$SLICER_JSON_PATH" \
                 --slicer-json-filename-temp "$SLICER_FILENAME" \
                 --output "$MATRIX_SLICER_FILE" || exit 1
 done
-
+ 
 DIR="projects/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
 for FORMULA in ochiai; do
   if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --formula "$FORMULA" || continue; fi

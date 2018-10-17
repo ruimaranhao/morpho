@@ -14,9 +14,9 @@ def line_to_class(line):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--line-susps', required=True)
-parser.add_argument('--formula', required=True)
 parser.add_argument('--test-failing', required=True)
 parser.add_argument('--tests-log', required=True)
+parser.add_argument('--bug-no', required=True)
 parser.add_argument('--output', required=True)
 
 args = parser.parse_args()
@@ -29,10 +29,12 @@ failing = []
 # @ improve this
 with open(args.tests_log) as f:
     lines = f.read().splitlines() 
+    acm = 0
     for t in tests_failing:
         class_name, test_name = t.rsplit('::')
         i=0
         j=0
+        start=0
         for l in lines:
             if re.search(r'--- '+class_name+r'::'+test_name, l) != None:
                 start = 1
@@ -44,6 +46,9 @@ with open(args.tests_log) as f:
                         'test': t,
                         'error': error
                     }) 
+                
+                if len(error) == 0:
+                    print(args.bug_no)
             i+=1
 
 rankings = []

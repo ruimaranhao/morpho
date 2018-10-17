@@ -30,7 +30,7 @@ FORMULA=$3;
 TOTAL_DEFN=$4; 
 
 for BUG in $(seq 1 $NO_BUGS); do 
-  echo $BUG
+  echo '============' $BUG
   DIR="$FOLDER/data/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
   COVERAGE_MATRIX=$FOLDER/data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/matrix
   if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi

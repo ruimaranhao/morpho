@@ -9,23 +9,26 @@ import numpy as np
 parser = argparse.ArgumentParser()
 parser.add_argument('--tests', required=True)
 parser.add_argument('--slicer-test', required=True)
-parser.add_argument('--slicer-spectra', required=True)
+parser.add_argument('--element-names', required=True)
 parser.add_argument('--slicer-json-path', required=True)
 parser.add_argument('--slicer-json-filename-temp', required=True)
 parser.add_argument('--output', required=True)
 
 args = parser.parse_args()
+class_name, test_name = args.slicer_test.split('.')
 
-test_name = args.slicer_test.replace('/','')
+test_name = test_name.replace('/','')
 slicer_json_name = args.slicer_json_filename_temp.replace('*',test_name)
 
 i = 0
+idx = 0
 with open(args.tests,'r') as f:
-    tests = f.read().splitlines() 
+    tests = f.read().splitlines()
     for t in tests:
         i+=1
-        if re.search(r'::'+test_name, t.lower()):
+        if re.search(r'.*'+class_name+r'::'+test_name, t):
             idx = i
+
 
 with open(args.slicer_json_path+slicer_json_name) as json_data:
     data = json.load(json_data)
@@ -33,7 +36,7 @@ with open(args.slicer_json_path+slicer_json_name) as json_data:
 y = np.loadtxt(args.output, dtype=np.object)
 
 dic = {}
-with open(args.slicer_spectra) as f:
+with open(args.element_names) as f:
     spectra = f.read().splitlines() 
     i = 0
     for l in spectra:
@@ -41,14 +44,14 @@ with open(args.slicer_spectra) as f:
         dic.setdefault(l, []).append(i)
         i+=1
 
-
 old = np.array(y[idx-1], copy=True)  
+
 for c in range(np.size(y[idx-1], 0) - 1):
         y[idx-1][c] = 0  
 
-for s in data['slice']:
-    locs = eval(s['loc'])
-    class_name = s['class']
+for s in data['slicer']:
+    locs = s['loc']
+    class_name = s['class'].replace('/','.').replace('.java','')
     for l in locs:
         key = str(class_name)+'#'+str(l)
         if key in dic:
