@@ -7,7 +7,6 @@ import operator
 import re
 from itertools import islice
 
-
 def line_to_class(line):
     classname, loc = line.rsplit('#',1)
     return classname, loc
@@ -48,8 +47,6 @@ with open(args.tests_log) as f:
              })
             if len(lines[start::]) == 0:
                 print('ERROR!!', args.bug_no, test_name.replace('--- ',''))
-
-            
 
 rankings = []
 with open(args.line_susps) as fin:

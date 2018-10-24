@@ -20,15 +20,13 @@ class_name, test_name = args.slicer_test.split('.')
 test_name = test_name.replace('/','')
 slicer_json_name = args.slicer_json_filename_temp.replace('*',test_name)
 
-i = 0
-idx = 0
+i = 0; idx = 0
 with open(args.tests,'r') as f:
     tests = f.read().splitlines()
     for t in tests:
         i+=1
         if re.search(r'.*'+class_name+r'::'+test_name, t):
             idx = i
-
 
 with open(args.slicer_json_path+slicer_json_name) as json_data:
     data = json.load(json_data)
