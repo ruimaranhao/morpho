@@ -24,32 +24,32 @@ args = parser.parse_args()
 tests_failing = args.test_failing.split('\n')
 
 dic={}
-
 failing = []
-# @ improve this
 with open(args.tests_log) as f:
     lines = f.read().splitlines() 
-    acm = 0
-    for t in tests_failing:
-        class_name, test_name = t.rsplit('::')
-        i=0
-        j=0
-        start=0
-        for l in lines:
-            if re.search(r'--- '+class_name+r'::'+test_name, l) != None:
-                start = 1
-                j=i+1
-            if start == 1 and re.search(r'.*at .*',l) != None:
-                start = 0
-                error = lines[j:i]
+    k = 0; start = -1; end = 0; test = 1
+    for i in range(len(lines)):
+        if lines[i] in tests_failing:
+            if start > -1:
                 failing.append({
-                        'test': t,
-                        'error': error
-                    }) 
-                
-                if len(error) == 0:
-                    print(args.bug_no)
-            i+=1
+                    'test': test_name.replace('--- ',''),
+                    'error': lines[start:i]
+                })
+                if len(lines[start:i]) == 0:
+                    print('ERROR!!', args.bug_no, test_name.replace('--- ',''))
+
+            test_name = lines[i]
+            start = i+1 
+
+        if len(lines)-1 == i and start > -1:
+            failing.append({
+                'test': test_name.replace('--- ',''),
+                'error': lines[start::]
+             })
+            if len(lines[start::]) == 0:
+                print('ERROR!!', args.bug_no, test_name.replace('--- ',''))
+
+            
 
 rankings = []
 with open(args.line_susps) as fin:

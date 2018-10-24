@@ -71,7 +71,7 @@ for BUG in $(seq 1 $NO_BUGS); do
                                --source-code-lines "$HERE/source-code-lines/$PROJECT-${BUG}b.source-code.lines" \
                                --output "$LINE_SUSPS_FILE" || exit 1
 
-      TEST_FAILING=$(grep "^---"  $D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG | cut -f2 -d' ')
+      TEST_FAILING=$(grep "^---"  $D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG | cut -f2)
 
       DIR="$FOLDER/output/$PROJECT"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
       JSON_SUSPS_FILE=$(pwd)/$BUG.json
@@ -80,10 +80,11 @@ for BUG in $(seq 1 $NO_BUGS); do
                                --tests-log "$TESTS_LOG" \
                                --bug-no "$BUG" \
                                --output "$JSON_SUSPS_FILE" || exit 1
+      break
 
       popd >/dev/null
     done
-
+    break
     popd >/dev/null
   done
 done
