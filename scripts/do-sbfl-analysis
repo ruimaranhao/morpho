@@ -40,7 +40,7 @@ TESTS_LOG=$D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG
 if [ ! -f "$TESTS_LOG" ]; then echo "given logs file does not exist" >&2; exit 1; fi
 
 if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --formula "$FORMULA" || continue; fi
-DIR="projects/$PROJECT/$BUG/formula-$FORMULA"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+DIR="results/$PROJECT/$BUG/formula-$FORMULA"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
 if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --total-defn "$TOTAL_DEFN" || continue; fi
 DIR="totaldefn-$TOTAL_DEFN"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
 
@@ -56,6 +56,20 @@ stmt-susps-to-line-susps --stmt-susps "$STMT_SUSPS_FILE" \
                          --source-code-lines "$HERE/source-code-lines/$PROJECT-${BUG}b.source-code.lines" \
                          --output "$LINE_SUSPS_FILE" || exit 1
 
+for SCORING_SCHEME in first last mean median; do
+  echo '---- ' $SCORING_SCHEME
+  if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --scoring-scheme "$SCORING_SCHEME" || continue; fi
+  DIR="scoring-$SCORING_SCHEME"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+  DEST=$(pwd)/score-slicer.txt
+  score-ranking --project "$PROJECT" --bug "$BUG" \
+                --line-susps <(tail -n +2 "$LINE_SUSPS_FILE") \
+                --scoring-scheme "$SCORING_SCHEME" \
+                --sloc-csv "$HERE/buggy-lines/sloc.csv" \
+                --buggy-lines "$HERE/buggy-lines/$PROJECT-$BUG.buggy.lines" \
+                --output "$DEST" || exit 1
+  popd >/dev/null
+done
+
 TEST_FAILING=$(grep "^---"  $TESTS_LOG | cut -f2 -d' ')
 
 popd >/dev/null; popd >/dev/null
@@ -65,7 +79,10 @@ JSON_SUSPS_FILE=$(pwd)/$BUG.json
 line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
                          --test-failing "$TEST_FAILING" \
                          --tests-log "$TESTS_LOG" \
+                         --bug-no "$BUG" \
                          --output "$JSON_SUSPS_FILE" || exit 1
+
+
 
 popd >/dev/null
 

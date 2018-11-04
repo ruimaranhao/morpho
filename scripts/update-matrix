@@ -42,10 +42,15 @@ with open(args.element_names) as f:
         dic.setdefault(l, []).append(i)
         i+=1
 
-old = np.array(y[idx-1], copy=True)  
+if idx == 1:
+    old = np.array(y, copy=True)
+    row = y
+else:
+    old = np.array(y[idx-1], copy=True)
+    row = y[idx-1]
 
-for c in range(np.size(y[idx-1], 0) - 1):
-        y[idx-1][c] = 0  
+for c in range(np.size(y, 0) - 1):
+        row[c] = 0  
 
 for s in data['slicer']:
     locs = s['loc']
@@ -54,9 +59,13 @@ for s in data['slicer']:
         key = str(class_name)+'#'+str(l)
         if key in dic:
             if old[dic[key][0]] == '1':
-                y[idx-1][dic[key][0]] = 1
+                row[dic[key][0]] = 1
             else:
-                y[idx-1][dic[key][0]] = 0
+                row[dic[key][0]] = 0
 
-np.savetxt(args.output, y, fmt = '%s')
-
+if idx == 1:
+    y = row
+    np.savetxt(args.output, y[None], fmt = '%s')
+else:
+    y[idx-1] = row
+    np.savetxt(args.output, y, fmt = '%s')

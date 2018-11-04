@@ -55,7 +55,7 @@ for SLICER_TEST in $SLICER_TESTS; do
                 --output "$MATRIX_SLICER_FILE" || exit 1
 done
  
-DIR="projects/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+DIR="results/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
 for FORMULA in ochiai; do
   if [ "$RESTRICTIONS_FILE" ]; then check-restrictions "$RESTRICTIONS_FILE" --formula "$FORMULA" || continue; fi
   DIR="formula-$FORMULA-slicer"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
