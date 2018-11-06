@@ -15,6 +15,7 @@ parser.add_argument('--slicer-json-filename-temp', required=True)
 parser.add_argument('--output', required=True)
 
 args = parser.parse_args()
+print(args.slicer_test)
 class_name, test_name = args.slicer_test.split('.')
 
 test_name = test_name.replace('/','')
@@ -49,8 +50,8 @@ else:
     old = np.array(y[idx-1], copy=True)
     row = y[idx-1]
 
-for c in range(np.size(y, 0) - 1):
-        row[c] = 0  
+for c in range(np.size(row, 0) - 1):
+    row[c] = 0  
 
 for s in data['slicer']:
     locs = s['loc']
