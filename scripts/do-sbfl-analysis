@@ -70,19 +70,19 @@ for SCORING_SCHEME in first last mean median; do
   popd >/dev/null
 done
 
-TEST_FAILING=$(grep "^---"  $TESTS_LOG | cut -f2 -d' ')
+# TEST_FAILING=$(grep "^---"  $TESTS_LOG | cut -f2 -d' ')
 
-popd >/dev/null; popd >/dev/null
+# popd >/dev/null; popd >/dev/null
 
-DIR="output/$PROJECT"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
-JSON_SUSPS_FILE=$(pwd)/$BUG.json
-line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
-                         --test-failing "$TEST_FAILING" \
-                         --tests-log "$TESTS_LOG" \
-                         --bug-no "$BUG" \
-                         --output "$JSON_SUSPS_FILE" || exit 1
+# DIR="output/$PROJECT"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
+# JSON_SUSPS_FILE=$(pwd)/$BUG.json
+# line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
+#                          --test-failing "$TEST_FAILING" \
+#                          --tests-log "$TESTS_LOG" \
+#                          --bug-no "$BUG" \
+#                          --output "$JSON_SUSPS_FILE" || exit 1
 
 
 
-popd >/dev/null
+# popd >/dev/null
 

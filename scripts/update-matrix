@@ -15,7 +15,6 @@ parser.add_argument('--slicer-json-filename-temp', required=True)
 parser.add_argument('--output', required=True)
 
 args = parser.parse_args()
-print(args.slicer_test)
 class_name, test_name = args.slicer_test.split('.')
 
 test_name = test_name.replace('/','')
@@ -43,7 +42,12 @@ with open(args.element_names) as f:
         dic.setdefault(l, []).append(i)
         i+=1
 
-if idx == 1:
+try:
+    shape = (y.shape[0], y.shape[1])
+except IndexError:
+    shape = (1, y.shape[0])
+
+if shape[0] == 1:
     old = np.array(y, copy=True)
     row = y
 else:
@@ -64,7 +68,7 @@ for s in data['slicer']:
             else:
                 row[dic[key][0]] = 0
 
-if idx == 1:
+if shape[0] == 1:
     y = row
     np.savetxt(args.output, y[None], fmt = '%s')
 else:
