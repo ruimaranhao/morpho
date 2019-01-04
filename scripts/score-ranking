@@ -28,6 +28,7 @@ my $LINE_SUSPS;
 my $BUGGY_LINES;
 my $SLOC_CSV;
 my $SCHEME;
+my $FILENAME;
 
 my $OUT_FILE;
 GetOptions ("project=s"        => \$PID,
@@ -36,6 +37,7 @@ GetOptions ("project=s"        => \$PID,
             "sloc-csv=s"       => \$SLOC_CSV,
             "buggy-lines=s"    => \$BUGGY_LINES,
             "scoring-scheme=s" => \$SCHEME,
+            "scoring-log=s"    => \$FILENAME,
             "output=s"         => \$OUT_FILE)
     or die "Invalid arguments";
 
@@ -46,10 +48,11 @@ unless(defined $PID and
        defined $BUGGY_LINES and
        defined $SLOC_CSV and
        defined $SCHEME and
+       defined $FILENAME and
        defined $OUT_FILE) {
     die "usage: $0 --project <PID> --bug <BID> --line-susps <ranking file> " .
         "--scoring-scheme ($MIN|$MAX|$MEAN|$MEDIAN) --sloc-csv <sloc csv file> ".
-        "--buggy-lines <buggy lines file> --output <output file>";
+        "--buggy-lines <buggy lines file> --scoring-log <score logs file> --output <output file>";
 }
 # Validate arguments
 -e $LINE_SUSPS  or die "Ranking file doesn't exist: $LINE_SUSPS";
@@ -112,14 +115,16 @@ foreach my $key(@ties) {
     $ranks{$key}->{rank} = $avg;
 }
 
-# Print the ranking if debugging is enabled.
-if ($DEBUG) {
-    $index = scalar(@keys);
-    for (@keys) {
-        print("($index) Rank $ranks{$_}->{rank}: $_ -- $ranks{$_}->{susp}\n");
-        --$index;
+open(FILENAME, '>>', $FILENAME) or die "Cannot write output file!";
+    # Print the ranking if debugging is enabled.
+    if ($DEBUG) {
+        $index = scalar(@keys);
+        for (@keys) {
+            print(FILENAME "($index) Rank $ranks{$_}->{rank}: $_ -- $ranks{$_}->{susp}\n");
+            --$index;
+        }
     }
-}
+close(FILENAME);
 
 # Determine the rank for each buggy line and the overall min and max rank
 my @ranks_buggy_lines = ();
@@ -193,7 +198,11 @@ my $max   = $ranks_buggy_lines[-1];
 my $mean  = _get_mean(@ranks_buggy_lines);
 my $median= _get_median_sorted(@ranks_buggy_lines);
 
-if ($DEBUG) {print("Rank of all buggy lines: Min=$min, Max=$max, Mean=$mean, Median=$median\n")};
+open(FILENAME, '>>', $FILENAME) or die "Cannot write output file!";
+if ($DEBUG) {
+    print(FILENAME "Rank of all buggy lines: Min=$min, Max=$max, Mean=$mean, Median=$median\n")
+};
+close(FILENAME);
 
 # Compute the overall score, depending on scoring scheme and considered set of
 # classes (loaded classes vs. all classes)
