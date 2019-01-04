@@ -1,0 +1,14 @@
+#!/bin/sh
+
+PROJECT=$1
+BUGS=$2
+TOP=$3
+MACHINE=$4
+
+IFS=',' read -ra ADDR <<< "$BUGS"
+if [[ ${#ADDR[@]} > 1 ]]; then BUGS_LIST="${ADDR[@]}"; else BUGS_LIST=$(seq 1 $BUGS); fi
+for BUG in $BUGS_LIST; do
+    scp -r $MACHINE:~/lithium/lithium-slicer/app/logs_$TOP/"${PROJECT}_${BUG}"/$BUG .
+done
+
+echo all processes complete

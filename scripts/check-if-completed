@@ -1,0 +1,28 @@
+#!/bin/sh
+
+# check-if-completed <project> <bug_no> <lithium_slicer_path> <file_path>
+# check-if-completed <project> <bug_list> <lithium_slicer_path> <file_path>
+PROJECT=$1
+BUGS=$2
+LITHIUM_SLICER_FOLDER=$3
+FILE_PATH=$4
+
+IFS=',' read -ra ADDR <<< "$2"
+if [[ ${#ADDR[@]} > 1 ]]; then BUGS_LIST="${ADDR[@]}"; else BUGS_LIST=$(seq 1 $BUGS); fi
+
+for i in $BUGS_LIST; do
+    DIR="$LITHIUM_SLICER_FOLDER/$PROJECT/$i"; 
+    if [[ -d "$DIR" ]]; then pushd "$DIR" >/dev/null
+        for d in */ ; do
+            lines=$(find ./"$d" -type f -name "slicer*.json" | wc -l)
+            if [[ $lines -eq 0 ]]; then
+                echo "$PROJECT $i $d slicer not found" >> $FILE_PATH
+            fi
+        done
+        popd >/dev/null
+    else
+        echo "$DIR not found" >> $FILE_PATH
+    fi
+done
+
+
