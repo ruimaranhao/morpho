@@ -38,7 +38,7 @@ COVERAGE_MATRIX=$FOLDER/data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/matrix
 if [ ! -f "$COVERAGE_MATRIX" ]; then echo "given coverage matrix does not exist" >&2; exit 1; fi
 STATEMENT_NAMES=$FOLDER/data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/spectra
 if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
-TESTS_LOG=$FOLDER/data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/log.txt
+TESTS_LOG=$D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG
 if [ ! -f "$TESTS_LOG" ]; then echo "given logs file does not exist" >&2; exit 1; fi
 
 DIR="$FOLDER/projects/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
@@ -62,15 +62,15 @@ for FORMULA in ochiai; do
     stmt-susps-to-line-susps --stmt-susps "$STMT_SUSPS_FILE" \
                              --source-code-lines "$HERE/source-code-lines/$PROJECT-${BUG}b.source-code.lines" \
                              --output "$LINE_SUSPS_FILE" || exit 1
-
-    TEST_FAILING=$(grep "^---"  $D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG | cut -f2 -d' ')
     
+    TEST_FAILING=$(grep "^---"  ${D4J_PATH}/framework/projects/${PROJECT}/trigger_tests/${BUG} | cut -f2)
+
     DIR="$FOLDER/output/$PROJECT"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
     JSON_SUSPS_FILE=$(pwd)/$BUG.json
     line-susps-to-json-susps --line-susps "$LINE_SUSPS_FILE" \
-                             --formula "$FORMULA" \
                              --test-failing "$TEST_FAILING" \
                              --tests-log "$TESTS_LOG" \
+                             --bug-no "$BUG" \
                              --output "$JSON_SUSPS_FILE" || exit 1
 
     popd >/dev/null

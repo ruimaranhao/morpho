@@ -47,6 +47,7 @@ for BUG in $(seq 1 $NO_BUGS); do
   STATEMENT_NAMES=$FOLDER/data/$PROJECT/$BUG/gzoltars/$PROJECT/$BUG/spectra
   if [ ! -f "$STATEMENT_NAMES" ]; then echo "given statement-names file does not exist" >&2; exit 1; fi
   TESTS_LOG=$D4J_PATH/framework/projects/$PROJECT/trigger_tests/$BUG
+  echo $TESTS_LOG
   if [ ! -f "$TESTS_LOG" ]; then echo "given logs file does not exist" >&2; exit 1; fi
 
   DIR="$FOLDER/projects/$PROJECT/$BUG"; mkdir -p "$DIR"; pushd "$DIR" >/dev/null
