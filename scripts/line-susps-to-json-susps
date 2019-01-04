@@ -22,13 +22,13 @@ args = parser.parse_args()
 
 tests_failing = args.test_failing.split('\n')
 
+#TODO: Needs major refactoring :)
 dic={}
 failing = []
 with open(args.tests_log) as f:
     lines = f.read().splitlines() 
     start = -1
     for i in range(len(lines)):
-        print(lines[i], tests_failing)
         if lines[i] in tests_failing:
             if start > -1:
                 failing.append({
@@ -59,7 +59,6 @@ with open(args.line_susps) as fin:
             })
 
 dic['rankings'] = sorted(rankings, key=lambda item: item['score'], reverse=True)
-print(failing)
 dic['failing'] = failing
 
 # save data in json
